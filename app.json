@@ -1,0 +1,43 @@
+{
+  "expo": {
+    "name": "Offline Artifacts",
+    "slug": "offline-artifacts",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "scheme": "offlineartifacts",
+    "userInterfaceStyle": "dark",
+    "backgroundColor": "#0B0D12",
+    "icon": "./assets/icon.png",
+    "ios": {
+      "bundleIdentifier": "com.solyapps.offlineartifacts",
+      "supportsTablet": false,
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false,
+        "CFBundleDisplayName": "Offline Artifacts"
+      }
+    },
+    "android": {
+      "package": "com.solyapps.offlineartifacts",
+      "adaptiveIcon": {
+        "backgroundColor": "#0B0D12",
+        "foregroundImage": "./assets/android-icon-foreground.png",
+        "backgroundImage": "./assets/android-icon-background.png",
+        "monochromeImage": "./assets/android-icon-monochrome.png"
+      }
+    },
+    "web": {
+      "output": "single",
+      "favicon": "./assets/favicon.png",
+      "backgroundColor": "#0B0D12"
+    },
+    "plugins": [
+      "expo-status-bar"
+    ],
+    "owner": "solomonsasson",
+    "extra": {
+      "eas": {
+        "projectId": "a6b40bb4-1b5f-4293-8e77-666e12766b57"
+      }
+    }
+  }
+}
