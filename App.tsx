@@ -8,6 +8,7 @@ import {
   Text,
   TextInput,
   View,
+  useWindowDimensions,
 } from 'react-native';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
@@ -22,6 +23,9 @@ import {
 import { Viewer } from './src/Viewer';
 import { C } from './src/theme';
 
+const WIDE_BREAKPOINT = 700;
+const SIDEBAR_WIDTH = 360;
+
 export default function App() {
   return (
     <SafeAreaProvider>
@@ -34,6 +38,9 @@ export default function App() {
 type ViewerState = { entry: SavedArtifact; html: string };
 
 function Main() {
+  const { width } = useWindowDimensions();
+  const isWide = width >= WIDE_BREAKPOINT;
+
   const [saved, setSaved] = useState<SavedArtifact[]>([]);
   const [code, setCode] = useState('');
   const [busy, setBusy] = useState(false);
@@ -82,34 +89,19 @@ function Main() {
         style: 'destructive',
         onPress: async () => {
           await deleteSavedArtifact(entry.code);
+          if (viewer?.entry.code === entry.code) setViewer(null);
           refresh();
         },
       },
     ]);
   };
 
-  if (viewer) {
-    return (
-      <SafeAreaView style={styles.root} edges={['top', 'bottom']}>
-        <View style={styles.viewerHeader}>
-          <Pressable onPress={() => setViewer(null)} style={styles.backBtn}>
-            <Text style={styles.backText}>{'←'} Back</Text>
-          </Pressable>
-          <Text style={styles.viewerTitle} numberOfLines={1}>
-            {viewer.entry.title}
-          </Text>
-        </View>
-        <Viewer html={viewer.html} fileUri={viewer.entry.localPath || undefined} />
-      </SafeAreaView>
-    );
-  }
-
-  return (
-    <SafeAreaView style={styles.root} edges={['top', 'bottom']}>
+  const sidebar = (
+    <View style={isWide ? styles.sidebarWide : styles.root}>
       <Text style={styles.heading}>Offline Artifacts</Text>
       <Text style={styles.subheading}>
-        Type the 4-letter code from <Text style={styles.mono}>/offlineapp</Text> to download it for
-        offline viewing.
+        Type the 4-letter code from <Text style={styles.mono}>/offlineapp</Text> to download a page
+        for offline viewing.
       </Text>
 
       <View style={styles.entryRow}>
@@ -141,31 +133,86 @@ function Main() {
         keyExtractor={a => a.code}
         contentContainerStyle={{ paddingBottom: 24 }}
         ListEmptyComponent={<Text style={styles.empty}>Nothing downloaded yet.</Text>}
-        renderItem={({ item }) => (
-          <Pressable style={styles.row} onPress={() => openEntry(item)} onLongPress={() => onDelete(item)}>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.rowTitle} numberOfLines={1}>
-                {item.title}
-              </Text>
-              <Text style={styles.rowMeta}>
-                {item.code} · saved {new Date(item.savedAt).toLocaleDateString()}
-              </Text>
-            </View>
+        renderItem={({ item }) => {
+          const active = isWide && viewer?.entry.code === item.code;
+          return (
+            <Pressable
+              style={[styles.row, active && styles.rowActive]}
+              onPress={() => openEntry(item)}
+              onLongPress={() => onDelete(item)}
+            >
+              <View style={{ flex: 1 }}>
+                <Text style={styles.rowTitle} numberOfLines={1}>
+                  {item.title}
+                </Text>
+                <Text style={styles.rowMeta}>
+                  {item.code} · saved {new Date(item.savedAt).toLocaleDateString()}
+                </Text>
+              </View>
+            </Pressable>
+          );
+        }}
+      />
+    </View>
+  );
+
+  const viewerPane = viewer ? (
+    <View style={{ flex: 1 }}>
+      <View style={styles.viewerHeader}>
+        {!isWide && (
+          <Pressable onPress={() => setViewer(null)} style={styles.backBtn}>
+            <Text style={styles.backText}>{'←'} Back</Text>
           </Pressable>
         )}
-      />
+        <Text style={styles.viewerTitle} numberOfLines={1}>
+          {viewer.entry.title}
+        </Text>
+      </View>
+      <Viewer html={viewer.html} fileUri={viewer.entry.localPath || undefined} />
+    </View>
+  ) : (
+    <View style={[styles.viewerHeader, { justifyContent: 'center', borderBottomWidth: 0 }]}>
+      <Text style={styles.empty}>Select a saved page to view it here.</Text>
+    </View>
+  );
+
+  if (isWide) {
+    return (
+      <SafeAreaView style={styles.rootWide} edges={['top', 'bottom']}>
+        {sidebar}
+        <View style={styles.divider} />
+        {viewerPane}
+      </SafeAreaView>
+    );
+  }
+
+  if (viewer) {
+    return (
+      <SafeAreaView style={styles.root} edges={['top', 'bottom']}>
+        {viewerPane}
+      </SafeAreaView>
+    );
+  }
+
+  return (
+    <SafeAreaView style={styles.root} edges={['top', 'bottom']}>
+      {sidebar}
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: C.bg, padding: 20 },
+  rootWide: { flex: 1, backgroundColor: C.bg, flexDirection: 'row' },
+  sidebarWide: { width: SIDEBAR_WIDTH, padding: 20 },
+  divider: { width: StyleSheet.hairlineWidth, backgroundColor: C.cardBorder },
   heading: { color: C.text, fontSize: 28, fontWeight: '700', marginBottom: 4 },
   subheading: { color: C.dim, fontSize: 14, marginBottom: 20, lineHeight: 20 },
   mono: { fontFamily: 'Courier', color: C.accent },
   entryRow: { flexDirection: 'row', gap: 10, marginBottom: 12 },
   input: {
     flex: 1,
+    minWidth: 0,
     backgroundColor: C.card,
     borderColor: C.cardBorder,
     borderWidth: 1,
@@ -180,7 +227,8 @@ const styles = StyleSheet.create({
   downloadBtn: {
     backgroundColor: C.accent,
     borderRadius: 10,
-    paddingHorizontal: 18,
+    paddingHorizontal: 14,
+    minWidth: 92,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -199,6 +247,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
   },
+  rowActive: { borderColor: C.accent, borderWidth: 2 },
   rowTitle: { color: C.text, fontSize: 16, fontWeight: '600' },
   rowMeta: { color: C.dim, fontSize: 12, marginTop: 4 },
   viewerHeader: {
