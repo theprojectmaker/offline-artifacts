@@ -24,12 +24,10 @@ import { Viewer } from './src/Viewer';
 import { C } from './src/theme';
 
 const WIDE_BREAKPOINT = 700;
-const SIDEBAR_WIDTH = 360;
 
 export default function App() {
   return (
     <SafeAreaProvider>
-      <StatusBar style="light" />
       <Main />
     </SafeAreaProvider>
   );
@@ -46,6 +44,7 @@ function Main() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [viewer, setViewer] = useState<ViewerState | null>(null);
+  const [pageIsLight, setPageIsLight] = useState(false);
 
   const refresh = useCallback(() => {
     listSavedArtifacts().then(setSaved);
@@ -97,7 +96,7 @@ function Main() {
   };
 
   const sidebar = (
-    <View style={isWide ? styles.sidebarWide : styles.root}>
+    <View style={[styles.home, isWide && styles.homeWide]}>
       <Text style={styles.heading}>Offline Artifacts</Text>
       <Text style={styles.subheading}>
         Type the 4-letter code from <Text style={styles.mono}>/offlineapp</Text> to download a page
@@ -134,10 +133,9 @@ function Main() {
         contentContainerStyle={{ paddingBottom: 24 }}
         ListEmptyComponent={<Text style={styles.empty}>Nothing downloaded yet.</Text>}
         renderItem={({ item }) => {
-          const active = isWide && viewer?.entry.code === item.code;
           return (
             <Pressable
-              style={[styles.row, active && styles.rowActive]}
+              style={({ pressed }) => [styles.row, pressed && { opacity: 0.6 }]}
               onPress={() => openEntry(item)}
               onLongPress={() => onDelete(item)}
             >
@@ -156,56 +154,34 @@ function Main() {
     </View>
   );
 
-  const viewerPane = viewer ? (
-    <View style={{ flex: 1 }}>
-      <View style={styles.viewerHeader}>
-        {!isWide && (
-          <Pressable onPress={() => setViewer(null)} style={styles.backBtn}>
-            <Text style={styles.backText}>{'←'} Back</Text>
-          </Pressable>
-        )}
-        <Text style={styles.viewerTitle} numberOfLines={1}>
-          {viewer.entry.title}
-        </Text>
-      </View>
-      <Viewer html={viewer.html} fileUri={viewer.entry.localPath || undefined} />
-    </View>
-  ) : (
-    <View style={[styles.viewerHeader, { justifyContent: 'center', borderBottomWidth: 0 }]}>
-      <Text style={styles.empty}>Select a saved page to view it here.</Text>
-    </View>
-  );
-
-  if (isWide) {
-    return (
-      <SafeAreaView style={styles.rootWide} edges={['top', 'bottom']}>
-        {sidebar}
-        <View style={styles.divider} />
-        {viewerPane}
-      </SafeAreaView>
-    );
-  }
-
   if (viewer) {
     return (
-      <SafeAreaView style={styles.root} edges={['top', 'bottom']}>
-        {viewerPane}
-      </SafeAreaView>
+      <View style={styles.viewerRoot}>
+        <StatusBar style={pageIsLight ? 'dark' : 'light'} />
+        <Viewer
+          key={viewer.entry.code}
+          html={viewer.html}
+          code={viewer.entry.code}
+          onClose={() => setViewer(null)}
+          onPageColor={setPageIsLight}
+        />
+      </View>
     );
   }
 
   return (
     <SafeAreaView style={styles.root} edges={['top', 'bottom']}>
+      <StatusBar style="light" />
       {sidebar}
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: C.bg, padding: 20 },
-  rootWide: { flex: 1, backgroundColor: C.bg, flexDirection: 'row' },
-  sidebarWide: { width: SIDEBAR_WIDTH, padding: 20 },
-  divider: { width: StyleSheet.hairlineWidth, backgroundColor: C.cardBorder },
+  root: { flex: 1, backgroundColor: C.bg },
+  viewerRoot: { flex: 1, backgroundColor: C.bg },
+  home: { flex: 1, padding: 20 },
+  homeWide: { width: '100%', maxWidth: 620, alignSelf: 'center', paddingTop: 40 },
   heading: { color: C.text, fontSize: 28, fontWeight: '700', marginBottom: 4 },
   subheading: { color: C.dim, fontSize: 14, marginBottom: 20, lineHeight: 20 },
   mono: { fontFamily: 'Courier', color: C.accent },
@@ -247,19 +223,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
   },
-  rowActive: { borderColor: C.accent, borderWidth: 2 },
   rowTitle: { color: C.text, fontSize: 16, fontWeight: '600' },
   rowMeta: { color: C.dim, fontSize: 12, marginTop: 4 },
-  viewerHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    gap: 12,
-    borderBottomColor: C.cardBorder,
-    borderBottomWidth: 1,
-  },
-  backBtn: { paddingVertical: 4, paddingHorizontal: 8 },
-  backText: { color: C.accent, fontSize: 16, fontWeight: '600' },
-  viewerTitle: { color: C.text, fontSize: 15, fontWeight: '600', flex: 1 },
 });
